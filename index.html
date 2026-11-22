@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="si">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Subtitles</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#000000">
+<link rel="icon" href="IMG-20261122-WA0031.jpg">
+<style>
+*{box-sizing:border-box;font-family:Arial,sans-serif}
+body{margin:0;background:#000;color:#fff;min-height:100vh}
+.top{padding:14px;text-align:center;background:#000;border-bottom:1px solid #2a2200}
+.logo{width:58px;height:58px;border-radius:14px;object-fit:cover;border:2px solid #d4af37}
+h1{font-size:22px;margin:6px 0 2px;color:#f5d67a}
+.sub{color:#aaa;font-size:12px;margin:0}
+.wrap{max-width:900px;margin:auto;padding:12px}
+.upload{background:#111;border:2px dashed #d4af37;border-radius:18px;padding:22px;text-align:center;cursor:pointer;display:block}
+.upload input{display:none}
+.upload b{color:#f5d67a;font-size:17px}
+.upload p{color:#aaa;font-size:13px}
+.videoBox{position:relative;background:#000;border:2px solid #2a2200;border-radius:18px;overflow:hidden;margin-top:12px;display:none;aspect-ratio:16/9}
+video{width:100%;height:100%;object-fit:contain;background:#000}
+#subOverlay{position:absolute;left:0;right:0;bottom:8%;text-align:center;padding:0 10px;pointer-events:none}
+#subText{display:inline-block;background:rgba(0,0,0,.78);color:#fff;font-size:clamp(16px,4.5vw,28px);font-weight:bold;line-height:1.4;padding:6px 14px;border-radius:10px;max-width:95%}
+.controls{background:#111;border-radius:18px;padding:14px;margin-top:12px}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+button{flex:1;border:none;border-radius:12px;padding:13px 10px;font-weight:bold;font-size:14px;min-width:130px}
+.start{background:#d4af37;color:#000}
+.stop{background:#333;color:#fff}
+.dl{background:#16a34a;color:#fff}
+.clear{background:#7f1d1d;color:#fff}
+select{width:100%;padding:12px;border-radius:12px;background:#000;color:#fff;border:1px solid #444;margin-top:10px}
+.status{text-align:center;font-size:13px;color:#f5d67a;margin:10px 0}
+.list{background:#111;border-radius:14px;padding:12px;margin-top:12px;max-height:220px;overflow:auto}
+.item{border-bottom:1px solid #222;padding:8px 0;font-size:14px}
+.footer{text-align:center;color:#666;font-size:11px;margin-top:16px}
+</style>
+</head>
+<body>
+<div class="top">
+<img src="IMG-20261122-WA0031.jpg" class="logo">
+<h1>SUBTITLES</h1>
+<p class="sub">Video Subtitles to Sinhala - by Shantha Bandara</p>
+</div>
+<div class="wrap">
+<label class="upload" for="videoInput">
+<b>📹 Video ekak Select karanna</b>
+<p>Onama Size / Quality / Format - MP4, WebM, MOV, MKV</p>
+<input type="file" id="videoInput" accept="video/*">
+</label>
+<div class="videoBox" id="videoBox">
+<video id="video" controls playsinline></video>
+<div id="subOverlay"><span id="subText"></span></div>
+</div>
+<div class="controls">
+<div class="row">
+<button class="start" onclick="startListen()">🎙️ Auto Subtitles ON</button>
+<button class="stop" onclick="stopListen()">⏹️ OFF</button>
+</div>
+<select id="fromLang">
+<option value="en-US">Video Voice - English</option>
+<option value="si-LK">Video Voice - Sinhala</option>
+<option value="hi-IN">Video Voice - Hindi</option>
+</select>
+<div class="status" id="status">Video ekak dala Auto Subtitles ON karanna</div>
+<div class="row">
+<button class="dl" onclick="downloadSRT()">⬇️ SRT Download</button>
+<button class="clear" onclick="clearAll()">🗑️ Clear</button>
+</div>
+</div>
+<div class="list" id="list"><div style="color:#888;text-align:center">Thawama subtitles nehe</div></div>
+<p class="footer">shantha bandara creat - Black Theme - All Android - All Screen</p>
+</div>
+<script>
+let video=document.getElementById('video');
+let videoBox=document.getElementById('videoBox');
+let subText=document.getElementById('subText');
+let statusEl=document.getElementById('status');
+let listEl=document.getElementById('list');
+let subs=[]; let recognition=null; let listening=false;
+document.getElementById('videoInput').addEventListener('change',e=>{
+let f=e.target.files[0]; if(!f) return;
+video.src=URL.createObjectURL(f); videoBox.style.display='block';
+statusEl.innerText='Video eka load wuna: '+f.name;
+videoBox.scrollIntoView({behavior:'smooth'});
+});
+async function translateToSinhala(text){
+if(document.getElementById('fromLang').value==='si-LK') return text;
+try{
+let r=await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=si&dt=t&q='+encodeURIComponent(text));
+let d=await r.json(); return d[0].map(x=>x[0]).join('');
+}catch(e){ return text; }
+}
+function fmt(s){ s=Math.max(0,Math.floor(s)); let h=String(Math.floor(s/3600)).padStart(2,'0'); let m=String(Math.floor(s%3600/60)).padStart(2,'0'); let sec=String(s%60).padStart(2,'0'); return h+':'+m+':'+sec+',000'; }
+function addSub(en,si){
+let t=video.currentTime||0; subs.push({time:t,en,si}); subText.innerText=si;
+listEl.innerHTML=subs.map((s,i)=>'<div class="item"><small>'+fmt(s.time)+'</small><br>'+s.si+'</div>').reverse().join('');
+setTimeout(()=>{ if(subs[subs.length-1] && subs[subs.length-1].si===si) subText.innerText=''; },5000);
+}
+function startListen(){
+let SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+if(!SR){ statusEl.innerText='Me Browser eke Auto Voice weda nehe. Chrome eken open karanna.'; return; }
+if(!video.src){ statusEl.innerText='Issella Video ekak danna!'; return; }
+if(listening) return; listening=true;
+recognition=new SR(); recognition.lang=document.getElementById('fromLang').value;
+recognition.continuous=true; recognition.interimResults=false;
+recognition.onresult=async(e=>{
+for(let i=e.resultIndex;i<e.results.length;i++){
+if(e.results[i].isFinal){
+let txt=e.results[i][0].transcript.trim(); if(!txt) continue;
+statusEl.innerText='Ahuna: '+txt;
+let si=await translateToSinhala(txt); addSub(txt,si);
+}
+}
+};
+recognition.onerror=e=>{ statusEl.innerText='Error: '+e.error; };
+recognition.onend=()=>{ if(listening){ try{recognition.start()}catch(e){} } };
+try{ recognition.start(); video.play(); statusEl.innerText='Ahagena innawa... Video eka Play karanna'; }catch(e){}
+}
+function stopListen(){ listening=false; if(recognition) recognition.stop(); video.pause(); statusEl.innerText='Auto Subtitles OFF'; }
+function clearAll(){ subs=[]; subText.innerText=''; listEl.innerHTML='Thawama subtitles nehe'; statusEl.innerText='Clear kala'; }
+function downloadSRT(){
+if(!subs.length){ alert('Thawama subtitles nehe!'); return; }
+let srt=''; subs.forEach((s,i)=>{ srt+=(i+1)+'\n'+fmt(s.time)+' --> '+fmt(s.time+4)+'\n'+s.si+'\n\n'; });
+let a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([srt],{type:'text/plain'})); a.download='subtitles-sinhala.srt'; a.click();
+}
+video.addEventListener('timeupdate',()=>{
+let cur=subs.slice().reverse().find(s=>Math.abs(video.currentTime-s.time)<4);
+if(cur) subText.innerText=cur.si;
+});
+</script>
+</body>
+</html>
