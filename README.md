@@ -1,2 +1,1 @@
-# subtitles
-Video Subtitles to Sinhala App
+github.com/shanthabandara1996-beep/Subtitles/settings/pages
